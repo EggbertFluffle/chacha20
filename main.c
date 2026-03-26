@@ -20,12 +20,14 @@
 // During a quarter round, you have the A, B, C, and D blocks:
 // 1. A = A + B
 
+// Constant phrase that takes up blocks 0, 1, 2, 3
 const char* constant_phrase = "expand 32-byte k";
 
 typedef struct {
 	uint32_t data[16];
 } chacha20;
 
+// Indecies for quarter-rounds over columns and diagonals
 const size_t columns[4][4] = {
 	{0, 4, 8, 12},
 	{1, 5, 9, 13},
@@ -52,12 +54,15 @@ chacha20 chacha20_create(const char* key, uint32_t counter) {
 		out.data[i] = *((uint32_t*) &constant_phrase[i*4]);
 	}
 
+	// Insert the key
 	for (int i = 0; i < 8; i++) {
 		out.data[i + 4] = *((uint32_t*) &key[i*4]);
 	}
 
+	// Insert the counter
 	out.data[13] = counter;
 
+	// Set the nonce to 0? (THIS MIGHT BE WRONG)
 	for(int i = 0; i < 3; i++) {
 		out.data[14 + i] = 0;
 	}
@@ -65,10 +70,12 @@ chacha20 chacha20_create(const char* key, uint32_t counter) {
 	return out;
 }
 
+// Rotate a 32bit integer with wrapping
 uint32_t rotate(uint32_t num, size_t rots) {
 	return (num << rots) | (num >> (32 - rots));
 }
 
+// Make 1 quarter round on the matrix
 void chacha20_quarter_round(chacha20* cha, const size_t* idx) {
 	uint32_t A = cha->data[idx[0]];
 	uint32_t B = cha->data[idx[1]];
@@ -93,7 +100,7 @@ void chacha20_quarter_round(chacha20* cha, const size_t* idx) {
 	cha->data[idx[1]] = B; // B done
 }
 
-// Gives a uint8_t[64]
+// Gives a uint8_t[64] containing key bits
 char* chacha20_get_chunk(chacha20* cha1) {
 	chacha20* cha2 = (chacha20*)malloc(sizeof(chacha20));
 	*cha2 = *cha1;
@@ -117,6 +124,7 @@ char* chacha20_get_chunk(chacha20* cha1) {
 	return (char*) cha2->data;
 }
 
+// Use chacha20 to get chunks and encrypt a msg
 char* chacha20_encrypt(chacha20 cha, const char* msg, size_t len) {
 	char* out = (char*)malloc(sizeof(char) * len);
 
@@ -134,10 +142,12 @@ char* chacha20_encrypt(chacha20 cha, const char* msg, size_t len) {
 	return out;
 }
 
+// Same thing as encrypt
 char* chacha20_decrypt(chacha20 cha, const char* d_msg, size_t len) {
 	return chacha20_encrypt(cha, d_msg, len);
 }
 
+// Print chacha matrix contents
 void chacha20_print(chacha20 cha) {
 	for(int i = 0; i < 16; i++) {
 		printf("%d ", cha.data[i]);
@@ -152,17 +162,23 @@ int main() {
 	chacha20_print(cha);
 
 	FILE *file = fopen("macbeth.txt", "r");
+
+	// Get the length of the file
 	fseek(file, 0L, SEEK_END);
 	size_t file_size = ftell(file);
 	fseek(file, 0L, SEEK_SET);
+
+	// Read the file into memory
 	char* text = (char*)malloc(sizeof(char) * file_size);
 	fgets(text, file_size, file);
 
 	printf("text size: %d\n", strlen(text));
 
+	// Encrypt the message
 	char* e_msg = chacha20_encrypt(cha, text, file_size);
 	printf("%s", e_msg);
 
+	// Decrypt the message
 	char* d_msg = chacha20_decrypt(cha, e_msg, file_size);
 	printf("d_msg size: %d", strlen(d_msg));
 	printf("%s", d_msg);
