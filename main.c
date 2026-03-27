@@ -6,19 +6,13 @@
 #include <memory.h>
 #include <sys/types.h>
 
-// Chachat format
-// 4 x 4 grid, every cell is 32 bits => 512 bits total
-// First 4 are constants
-// Next 8 are keys
-// 1 is block number (sometimes 2)
-// 3 is nonce (sometimes 2)
-
-// We do 20 rounds of mixing. Each round consisting of 
-//  - 4 mixes in columns
-//  - 4 mixes in diagonals (gives good diffusion)
-
-// During a quarter round, you have the A, B, C, and D blocks:
-// 1. A = A + B
+// Possibilities for improvements
+// 		1. SIMD parallelism: not a real modification
+// 		2. ChachaX: variable rounds trading speed for security
+// 		3. Increase the amount of state 6x6 grid, 8x8 grid
+// 		4. Change the rotation constatnts and test avalanche effect (16, 12, 8, 7)
+//		5. Change cells in "columns" and "diagonals"
+//		6. Shrink the constants to include MORE key
 
 // Constant phrase that takes up blocks 0, 1, 2, 3
 const char* constant_phrase = "expand 32-byte k";
@@ -60,11 +54,11 @@ chacha20 chacha20_create(const char* key, uint32_t counter) {
 	}
 
 	// Insert the counter
-	out.data[13] = counter;
+	out.data[12] = counter;
 
 	// Set the nonce to 0? (THIS MIGHT BE WRONG)
 	for(int i = 0; i < 3; i++) {
-		out.data[14 + i] = 0;
+		out.data[13 + i] = 0;
 	}
 
 	return out;
@@ -82,64 +76,52 @@ void chacha20_quarter_round(chacha20* cha, const size_t* idx) {
 	uint32_t C = cha->data[idx[2]];
 	uint32_t D = cha->data[idx[3]];
 
-	A = A + B;
-	D = D ^ A;
-	D = rotate(D, 16);
-	C = D + C;
-	B = B ^ C;
-	B = rotate(B, 12);
-	A = A + B;
-	cha->data[idx[0]] = A; // A done
-	D = D ^ A;
-	D = rotate(D, 8);
-	cha->data[idx[3]] = D; // D done
-	C = C + D;
-	cha->data[idx[2]] = C; // C done
-	B = B ^ C;
-	B = rotate(B, 7);
-	cha->data[idx[1]] = B; // B done
+	A += B; D ^= A; D = rotate(D, 16);
+	C += D; B ^= C; B = rotate(B, 12);
+	A += B; D ^= A; D = rotate(D, 8);
+	C += D; B ^= C; B = rotate(B, 7);
+
+	cha->data[idx[0]] = A;
+	cha->data[idx[3]] = D;
+	cha->data[idx[2]] = C;
+	cha->data[idx[1]] = B;
 }
 
-// Gives a uint8_t[64] containing key bits
-char* chacha20_get_chunk(chacha20* cha1) {
-	chacha20* cha2 = (chacha20*)malloc(sizeof(chacha20));
-	*cha2 = *cha1;
+void chacha20_get_chunk(chacha20* cha1, uint8_t out[64]) {
+    chacha20 cha2;
+    memcpy(cha2.data, cha1->data, 64);
 
-	for(int i = 0; i < 10; i++) {
-		for(int j = 0; j < 4; j++) {
-			chacha20_quarter_round(cha2, columns[j]);
+    for(int i = 0; i < 10; i++) {
+        for(int j = 0; j < 4; j++) {
+			chacha20_quarter_round(&cha2, columns[j]);
 		}
 
-		for(int j = 0; j < 4; j++) {
-			chacha20_quarter_round(cha2, diagonals[j]);
+        for(int j = 0; j < 4; j++) {
+			chacha20_quarter_round(&cha2, diagonals[j]);
 		}
+    }
+
+    for(int i = 0; i < 16; i++) {
+        cha2.data[i] += cha1->data[i];
 	}
 
-	for(int i = 0; i < 16; i++) {
-		cha2->data[i] += cha1->data[i];
-	}
-
-	cha1->data[15] += 1;
-
-	return (char*) cha2->data;
+    cha1->data[12] += 1;
+    memcpy(out, cha2.data, 64);
 }
 
-// Use chacha20 to get chunks and encrypt a msg
 char* chacha20_encrypt(chacha20 cha, const char* msg, size_t len) {
-	char* out = (char*)malloc(sizeof(char) * len);
+    char* out = (char*)malloc(sizeof(char) * len);
+    uint8_t chunk[64];
 
-	char* key_chunk = NULL;
-	for(size_t i = 0; i < len; i++) {
-		if(i % 64 == 0) {
-			if(key_chunk != NULL) free(key_chunk);
-			key_chunk = chacha20_get_chunk(&cha);
+    for(size_t i = 0; i < len; i++) {
+        if(i % 64 == 0) {
+			chacha20_get_chunk(&cha, chunk);
 		}
 
-		out[i] = msg[i] ^ key_chunk[i % 64];
-	}
+        out[i] = msg[i] ^ chunk[i % 64];
+    }
 
-	free(key_chunk);
-	return out;
+    return out;
 }
 
 // Same thing as encrypt
@@ -159,7 +141,7 @@ void chacha20_print(chacha20 cha) {
 
 int main() {
 	chacha20 cha = chacha20_create("helloworhelloworhelloworhellowor", 0);
-	chacha20_print(cha);
+	// chacha20_print(cha);
 
 	FILE *file = fopen("macbeth.txt", "r");
 
@@ -176,10 +158,10 @@ int main() {
 
 	// Encrypt the message
 	char* e_msg = chacha20_encrypt(cha, text, file_size);
-	printf("%s", e_msg);
+	// printf("%s", e_msg);
 
 	// Decrypt the message
 	char* d_msg = chacha20_decrypt(cha, e_msg, file_size);
 	printf("d_msg size: %d", strlen(d_msg));
-	printf("%s", d_msg);
+	// printf("%s", d_msg);
 }
