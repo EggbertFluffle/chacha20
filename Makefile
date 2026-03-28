@@ -4,4 +4,4 @@ chacha20: chacha20.c
 	gcc chacha20.c -o chacha20 -g
 
 salsaX: salsaX.c
-	gcc salsaX.c -o salsax-g
+	gcc salsaX.c -o salsax -g
