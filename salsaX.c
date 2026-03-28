@@ -45,7 +45,6 @@ const size_t BLOCK_ALLOCATIONS[15][4] = {
 const int ROUNDS = 20;
 const int ITERATIONS = 10;
 
-// Telemetry and testing
 uint64_t total_rounds = 0;
 uint64_t matrices_allocated = 0;
 
@@ -53,9 +52,7 @@ uint64_t rounding_time = 0;
 uint64_t encrypting_time = 0;
 uint64_t decrypting_time = 0;
 
-// Constant phrase that takes up blocks 0, 1, 2, 3
-// New constant phrase must be able to handle the maximum of 312 bytes
-const char* constant_phrase = "expand 32-byte k was a string that we had to include at the start of this string to retain compatability with the other versions of chacha20. The idea is that by including that section, and chopping off any part of the constant we don't need, we could effectively retain compatability while still having a const";
+const char* constant_phrase = "expand 32-byte k";
 
 typedef struct {
 	size_t size;
@@ -63,9 +60,9 @@ typedef struct {
 } salsax;
 
 salsax create_salsax(size_t size, const char* key) {
-	const size_t key_size = strlen(key);
-	if (key_size(size) * 4 != key_size) {
-		printf("Invalid key size %zd for salsa%zd", key_size, size);
+	const size_t key_len = strlen(key);
+	if (key_size(size) * 4 != key_len) {
+		printf("Invalid key size %zd for salsa%zd", key_len, size);
 		exit(-1);
 	}
 
@@ -74,22 +71,17 @@ salsax create_salsax(size_t size, const char* key) {
 		.data = (uint32_t*)malloc(sizeof(uint32_t) * size * size)
 	};
 	
-	// Insert the constant phrase
 	memcpy(salsa.data, constant_phrase, const_size(size) * 4);
 
-	// Insert user key
 	memcpy(salsa.data + key_start(size), key, key_size(size) * 4);
 	
-	// TODO: Determine if we should set block and nonce to zero
-	memset(salsa.data + block_start(size), 0, block_size(size));
-	memset(salsa.data + nonce_start(size), 0, nonce_size(size));
+	memset(salsa.data + block_start(size), 0, block_size(size) * 4);
+	memset(salsa.data + nonce_start(size), 0, nonce_size(size) * 4);
 
 	return salsa;
 }
 
-// Get the indicies of the group for the next fractional round
 void get_group_idx(size_t size, int iteration, bool diagonal, size_t* idx) {
-	// Decides weather an element is left out or not
 	bool odd = size % 2 == 1;
 
 	int i = 0;
@@ -108,11 +100,6 @@ void get_group_idx(size_t size, int iteration, bool diagonal, size_t* idx) {
 	}
 }
 
-// TODO: When picking the elements from a row, put the id of the
-// the left out element, equal to m, where m is the group we are
-// fractional rounding. Basically, if the size of the salsa is 5
-// and we are doing a fractional_round on column 3, put C at the
-// end of the list of elements, bringing all other elements down
 void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 	bool odd_salsa = salsa->size % 2 == 1;
 	size_t actual_size = odd_salsa ? salsa->size - 1 : salsa->size;
@@ -127,20 +114,19 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 
 	size_t triplets[3][pair_count];
 
-	// We include the first pass here for efficiency
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
-			triplets[i][0] = ess_count - i;
-			triplets[i][1] = ess_count - i - 1;
-			triplets[i][2] = i - 1;
+			triplets[i][0] = (ess_count - 1) - i;
+			triplets[i][1] = (ess_count - 1) - i - 1;
+			triplets[i][2] = i;
 
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 16);
 		} else {
-			triplets[i][0] = i - 1;
-			triplets[i][1] = i;
-			triplets[i][2] = ess_count - i;
+			triplets[i][0] = i;
+			triplets[i][1] = i + 1;
+			triplets[i][2] = (ess_count - 1) - i;
 
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
@@ -160,7 +146,6 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 		}
 	}
 
-	// Now we take the left out element and mix it in
 	if(odd_salsa) {
 		for (size_t i = 0; i < actual_size; i++) {
 			elements[actual_size] ^= elements[i];
@@ -171,13 +156,11 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 		}
 	}
 
-	printf("fraction round\n");
 	for(size_t i = 0; i < salsa->size; i++) {
 		salsa->data[idx[i]] = elements[i];
 	}
 }
 
-// Here we do the 20 rounds
 void salsax_get_chunk(salsax* salsa1, char* dest) {
 	size_t size = salsa1->size;
 	salsax salsa2 = {
@@ -194,8 +177,8 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 	}
 
 	for(int i = 0; i < 10; i++) {
-		salsax_fractional_round(&salsa2, columns[i]);
-		salsax_fractional_round(&salsa2, diagonals[i]);
+		salsax_fractional_round(&salsa2, columns[i % size]);
+		salsax_fractional_round(&salsa2, diagonals[i % size]);
 	}
 }
 
@@ -223,11 +206,6 @@ void salsax_print(salsax* salsa) {
 }
 
 int main(int argc, char** argv) {
-	// for(int i = 2; i <= 16; i++) {
-	// 	printf("%d\t -> %d %d %d %d\n", i, const_size(i), key_size(i), block_size(i), nonce_size(i));
-	// 	printf("\ttotal size: %d\n", const_size(i) + key_size(i) + block_size(i) + nonce_size(i));
-	// }
-
 	if(argc != 3) {
 		printf("Usage: salsax <SIZE> <KEY>\n");
 		exit(-1);
@@ -237,27 +215,14 @@ int main(int argc, char** argv) {
 	size_t size = atoi(argv[1]);
 
 	salsax salsa = create_salsax(size, key);
-	salsax_print(&salsa);
 
 	char msg_buffer[MSG_BUFFER];
+	memset(msg_buffer, 0, MSG_BUFFER);
 	fgets(msg_buffer, MSG_BUFFER, stdin);
-
-	printf("Message length: %zd\n", strlen(msg_buffer));
 
 	salsax_encrypt(&salsa, msg_buffer);
 
-	// chacha20 cha = chacha20_create("helloworhelloworhelloworhellowor", 0);
-	// chacha20_print(cha);
+	fwrite(msg_buffer, sizeof(char), strlen(msg_buffer), stdout);
 
-	// FILE *file = fopen("macbeth.txt", "r");
-	//
-	// // Get the length of the file
-	// fseek(file, 0L, SEEK_END);
-	// size_t file_size = ftell(file);
-	// fseek(file, 0L, SEEK_SET);
-	//
-	// // Read the file into memory
-	// char* text = (char*)malloc(sizeof(char) * file_size);
-	// fgets(text, file_size, file);
-	// printf("text size: %zd\n", strlen(text));
+	return 0;
 }

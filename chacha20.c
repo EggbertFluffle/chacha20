@@ -110,8 +110,7 @@ void chacha20_get_chunk(chacha20* cha1, uint8_t out[64]) {
     memcpy(out, cha2.data, 64);
 }
 
-char* chacha20_encrypt(chacha20 cha, const char* msg, size_t len) {
-    char* out = (char*)malloc(sizeof(char) * len);
+void chacha20_encrypt(chacha20 cha, char* msg, size_t len) {
     uint8_t chunk[64];
 
     for(size_t i = 0; i < len; i++) {
@@ -119,15 +118,13 @@ char* chacha20_encrypt(chacha20 cha, const char* msg, size_t len) {
 			chacha20_get_chunk(&cha, chunk);
 		}
 
-        out[i] = msg[i] ^ chunk[i % 64];
+        msg[i] ^= chunk[i % 64];
     }
-
-    return out;
 }
 
 // Same thing as encrypt
-char* chacha20_decrypt(chacha20 cha, const char* d_msg, size_t len) {
-	return chacha20_encrypt(cha, d_msg, len);
+void chacha20_decrypt(chacha20 cha, char* d_msg, size_t len) {
+	chacha20_encrypt(cha, d_msg, len);
 }
 
 // Print chacha matrix contents
@@ -140,29 +137,22 @@ void chacha20_print(chacha20 cha) {
 	}
 }
 
-int main() {
-	chacha20 cha = chacha20_create("helloworhelloworhelloworhellowor", 0);
-	// chacha20_print(cha);
+int main(int argc, char** argv) {
+	if(argc != 2) {
+		printf("Usage: chacha20 <KEY>\n");
+		exit(-1);
+	}
 
-	FILE *file = fopen("macbeth.txt", "r");
+	char* key = argv[1];
+	chacha20 cha = chacha20_create(key, 0);
 
-	// Get the length of the file
-	fseek(file, 0L, SEEK_END);
-	size_t file_size = ftell(file);
-	fseek(file, 0L, SEEK_SET);
+	char msg_buffer[65536];
+	memset(msg_buffer, 0, 65536);
+	fgets(msg_buffer, 65536, stdin);
 
-	// Read the file into memory
-	char* text = (char*)malloc(sizeof(char) * file_size);
-	fgets(text, file_size, file);
+	chacha20_encrypt(cha, msg_buffer, strlen(msg_buffer));
 
-	printf("text size: %d\n", strlen(text));
+	fwrite(msg_buffer, sizeof(char), strlen(msg_buffer), stdout);
 
-	// Encrypt the message
-	char* e_msg = chacha20_encrypt(cha, text, file_size);
-	// printf("%s", e_msg);
-
-	// Decrypt the message
-	char* d_msg = chacha20_decrypt(cha, e_msg, file_size);
-	printf("d_msg size: %d", strlen(d_msg));
-	// printf("%s", d_msg);
+	return 0;
 }
