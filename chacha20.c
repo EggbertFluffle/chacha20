@@ -11,6 +11,7 @@
 // 		2. ChachaX: variable rounds trading speed for security
 // 		3. Increase the amount of state 6x6 grid, 8x8 grid
 // 		4. Change the rotation constatnts and test avalanche effect (16, 12, 8, 7)
+
 //		5. Change cells in "columns" and "diagonals"
 //		6. Shrink the constants to include MORE key
 
@@ -82,9 +83,9 @@ void chacha20_quarter_round(chacha20* cha, const size_t* idx) {
 	C += D; B ^= C; B = rotate(B, 7);
 
 	cha->data[idx[0]] = A;
-	cha->data[idx[3]] = D;
-	cha->data[idx[2]] = C;
 	cha->data[idx[1]] = B;
+	cha->data[idx[2]] = C;
+	cha->data[idx[3]] = D;
 }
 
 void chacha20_get_chunk(chacha20* cha1, uint8_t out[64]) {
