@@ -59,6 +59,16 @@ typedef struct {
 	uint32_t* data;
 } salsax;
 
+void salsax_print(salsax* salsa) {
+	for (int i = 0; i < salsa->size; i++) {
+		for(int j = 0; j < salsa->size; j++) {
+			printf("%d\t\t", salsa->data[salsa->size * i + j]);
+		}
+		printf("\n");
+	}
+}
+
+
 salsax create_salsax(size_t size, const char* key) {
 	const size_t key_len = strlen(key);
 	if (key_size(size) * 4 != key_len) {
@@ -116,18 +126,22 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
+			triplets[i][0] = i;
+			triplets[i][1] = i + 1;
+			triplets[i][2] = (ess_count - 1) - i;
+		} else {
 			triplets[i][0] = (ess_count - 1) - i;
 			triplets[i][1] = (ess_count - 1) - i - 1;
 			triplets[i][2] = i;
+		}
+	}
 
+	for (size_t i = 0; i < pair_count; i++) {
+		if(i % 2 == 0) {
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 16);
 		} else {
-			triplets[i][0] = i;
-			triplets[i][1] = i + 1;
-			triplets[i][2] = (ess_count - 1) - i;
-
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 12);
@@ -180,6 +194,9 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 		salsax_fractional_round(&salsa2, columns[i % size]);
 		salsax_fractional_round(&salsa2, diagonals[i % size]);
 	}
+
+    salsa1->data[nonce_start(salsa1->size)] += 1;
+    memcpy(dest, salsa2.data, sizeof(uint32_t) * salsa1->size * salsa1->size);
 }
 
 void salsax_encrypt(salsax* salsa, char* msg) {
@@ -194,15 +211,6 @@ void salsax_encrypt(salsax* salsa, char* msg) {
 
         msg[i] = msg[i] ^ chunk[i % salsa_length];
     }
-}
-
-void salsax_print(salsax* salsa) {
-	for (int i = 0; i < salsa->size; i++) {
-		for(int j = 0; j < salsa->size; j++) {
-			printf("%d\t\t", salsa->data[salsa->size * i + j]);
-		}
-		printf("\n");
-	}
 }
 
 int main(int argc, char** argv) {

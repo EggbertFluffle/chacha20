@@ -128,9 +128,9 @@ void chacha20_decrypt(chacha20 cha, char* d_msg, size_t len) {
 }
 
 // Print chacha matrix contents
-void chacha20_print(chacha20 cha) {
+void chacha20_print(chacha20* cha) {
 	for(int i = 0; i < 16; i++) {
-		printf("%d ", cha.data[i]);
+		printf("%d\t", cha->data[i]);
 		if(i % 4 == 3) {
 			printf("\n");
 		}

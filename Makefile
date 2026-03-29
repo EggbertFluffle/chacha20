@@ -5,3 +5,6 @@ chacha20: chacha20.c
 
 salsaX: salsaX.c
 	gcc salsaX.c -o salsax -g
+
+clean: 
+	rm salsax chacha20

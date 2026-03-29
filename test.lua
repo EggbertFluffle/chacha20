@@ -17,19 +17,23 @@ local get_key = function(size)
 end
 
 local size = 4
-local key = get_key(8 * 4)
+-- local key = get_key(8 * 4)
+local key = "helloworldhelloworldhelloworldaa"
 
 -- local cmd = string.format("echo -n 'Hello world' | ./chacha20 '%s' | ./chacha20 '%s'", key, key)
 -- local cmd = string.format("echo -n 'Hello world' | ./salsax %d '%s' | ./chacha20 '%s'", size, key, key)
 local cmd = string.format("echo -n 'Hello world' | ./salsax %d '%s'", size, key)
 
-local file = io.popen(cmd)
-if not file then error("Unable to open e_cmd") end
-local msg = file:read("*a")
-print("Decrypted message: " .. msg)
+os.execute(string.format("echo -n 'Hello world' | ./salsax %d '%s'", size, key))
+os.execute(string.format("echo -n 'Hello world' | ./chacha20 '%s'", key))
 
-cmd = string.format("echo -n 'Hello world' | ./chacha20 '%s'", key)
-file = io.popen(cmd)
-if not file then error("Unable to open e_cmd") end
-msg = file:read("*a")
-print("Decrypted message: " .. msg)
+-- local file = io.popen(cmd)
+-- if not file then error("Unable to open e_cmd") end
+-- local msg = file:read("*a")
+-- print("Decrypted message: " .. msg)
+--
+-- cmd = string.format("echo -n 'Hello world' | ./chacha20 '%s'", key)
+-- file = io.popen(cmd)
+-- if not file then error("Unable to open e_cmd") end
+-- msg = file:read("*a")
+-- print("Decrypted message: " .. msg)
