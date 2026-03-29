@@ -213,6 +213,8 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 	for(int i = 0; i < 10; i++) {
 		for(int j = 0; j < size; j++) {
 			salsax_fractional_round(&salsa2, columns[j % size]);
+			// salsax_print(&salsa2);
+			// exit(1);
 		}
 
 		for(int j = 0; j < size; j++) {
@@ -231,8 +233,6 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 void salsax_encrypt(salsax* salsa, char* msg, size_t len) {
 	size_t salsa_length = salsa->size * salsa->size * 4;
 	char chunk[salsa_length];
-
-	salsax_print(salsa);
 
     for(size_t i = 0; i < len; i++) {
         if(i % salsa_length == 0) {

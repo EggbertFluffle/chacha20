@@ -97,15 +97,14 @@ end
 
 local generic = function ()
 	local size = 5
-	local key = string.rep("a", key_sizes[size - 1] * 4, "")
-	print("key: " .. key)
+	local key = get_key(5)
 
 	local from = "small.txt"
 	local enc = "enc.txt"
 	local to = "d_small.txt"
 
-	salsax(size, key, from, enc)
-	salsax(size, key, enc, to)
+	print(salsax(size, key, from, enc))
+	print(salsax(size, key, enc, to))
 
 	local diff = io.popen(string.format("diff %s %s", from, to))
 	if not diff then error("Unable to diff") end
