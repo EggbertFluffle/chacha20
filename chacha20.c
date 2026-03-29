@@ -146,21 +146,27 @@ void chacha20_decrypt(chacha20 cha, char* d_msg, size_t len) {
 }
 
 int main(int argc, char** argv) {
-	if(argc != 2) {
-		printf("Usage: chacha20 <KEY>\n");
+	if(argc != 4) {
+		printf("Usage: chacha20 <KEY> <INPUT_FILE> <OUTPUT_FILE>\n");
 		exit(-1);
 	}
 
-	char* key = argv[1];
-	chacha20 cha = chacha20_create(key, 0);
+	chacha20 cha = chacha20_create(argv[1], 0);
 
-	char msg_buffer[65536];
-	memset(msg_buffer, 0, 65536);
-	fgets(msg_buffer, 65536, stdin);
+	FILE* read_file = fopen(argv[2], "r");
+	fseek(read_file, 0L, SEEK_END);
+	size_t msg_len = ftell(read_file);
+	fseek(read_file, 0L, SEEK_SET);
 
-	chacha20_encrypt(cha, msg_buffer, strlen(msg_buffer));
+	char msg_buffer[msg_len];
+	fread(msg_buffer, sizeof(char), msg_len, read_file);
+	fclose(read_file);
 
-	fwrite(msg_buffer, sizeof(char), strlen(msg_buffer), stdout);
+	chacha20_encrypt(cha, msg_buffer, msg_len);
+
+	FILE* write_file = fopen(argv[3], "w+");
+	fwrite(msg_buffer, sizeof(char), msg_len, write_file);
+	fclose(write_file);
 
 	return 0;
 }

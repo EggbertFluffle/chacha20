@@ -228,12 +228,11 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
     memcpy(dest, salsa2.data, sizeof(uint32_t) * salsa1->size * salsa1->size);
 }
 
-void salsax_encrypt(salsax* salsa, char* msg) {
-	size_t msg_len = strlen(msg);
+void salsax_encrypt(salsax* salsa, char* msg, size_t len) {
 	size_t salsa_length = salsa->size * salsa->size * 4;
 	char chunk[salsa_length];
 
-    for(size_t i = 0; i < msg_len; i++) {
+    for(size_t i = 0; i < len; i++) {
         if(i % salsa_length == 0) {
 			salsax_get_chunk(salsa, chunk);
 		}
@@ -243,8 +242,8 @@ void salsax_encrypt(salsax* salsa, char* msg) {
 }
 
 int main(int argc, char** argv) {
-	if(argc != 3) {
-		printf("Usage: salsax <SIZE> <KEY>\n");
+	if(argc != 5) {
+		printf("Usage: salsax <SIZE> <KEY> <INPUT_FILE> <OUTPUT_FILE>\n");
 		exit(-1);
 	}
 
@@ -253,13 +252,22 @@ int main(int argc, char** argv) {
 
 	salsax salsa = create_salsax(size, key);
 
-	char msg_buffer[MSG_BUFFER];
-	memset(msg_buffer, 0, MSG_BUFFER);
-	fgets(msg_buffer, MSG_BUFFER, stdin);
+	FILE* read_file = fopen(argv[3], "r");
 
-	salsax_encrypt(&salsa, msg_buffer);
+	// Get size of input file
+	fseek(read_file, 0L, SEEK_END);
+	size_t msg_len = ftell(read_file);
+	fseek(read_file, 0L, SEEK_SET);
 
-	fwrite(msg_buffer, sizeof(char), strlen(msg_buffer), stdout);
+	char msg_buffer[msg_len];
+	fread(msg_buffer, sizeof(char), msg_len, read_file);
+	fclose(read_file);
+	
+	salsax_encrypt(&salsa, msg_buffer, msg_len);
+
+	FILE* write_file = fopen(argv[4], "w+");
+	fwrite(msg_buffer, sizeof(char), msg_len, write_file);
+	fclose(write_file);
 
 	return 0;
 }

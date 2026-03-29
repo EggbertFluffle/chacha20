@@ -16,13 +16,20 @@ local get_key = function(size)
 	return out
 end
 
-local size = 4
-local key = get_key(8 * 4)
+local backwards_compatable = function ()
+	local size = 4
+	local key = get_key(8 * 4)
 
-local cmd = string.format("echo -n 'Hello world' | ./chacha20 '%s' | ./salsax %d '%s'", key, size, key)
--- local cmd = string.format("echo -n 'Hello world' | ./salsax %d '%s' | ./chacha20 '%s'", size, key, key)
+	-- Encrypt with chacha20 and decrypt with salsa4
+	-- Encrypt with salsa4 and decrypt with chacha20
+	local cmds = {
+		string.format("./salsax %d '%s' macbeth.txt enc.txt && ./chacha20 '%s' enc.txt d_macbeth.txt", size, key, key)
+		-- string.format("./chacha20 '%s' macbeth.txt enc.txt && ./salsax %d '%s' enc.txt d_macbeth.txt", key, size, key)
+	}
 
-local file = io.popen(cmd)
-if not file then error("Unable to open e_cmd") end
-local msg = file:read("*a")
-print("Decrypted message: " .. msg)
+	for _, cmd in ipairs(cmds) do
+		os.execute(cmd)
+	end
+end
+
+backwards_compatable()
