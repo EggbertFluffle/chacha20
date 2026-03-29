@@ -35,6 +35,32 @@ local chacha20 = function (key, input, output)
 	os.execute(string.format("./chacha20 '%s' %s %s", key, input, output))
 end
 
+---@param str string
+---@return string
+local to_binary = function (str)
+	local write_file = io.open("tmp.txt", "w+")
+	if not write_file then error("Unable to write to temp file") end
+	write_file:write(str)
+	write_file:close()
+
+	local xxd = io.popen(string.format("xxd -b tmp.txt"))
+	if not xxd then error("Unable to xxd") end
+
+	local out = ""
+	while true do
+		---@type string
+		local line = xxd:read("*l")
+		if not line then break end
+
+		line = line:gsub(".*: ", "")
+		line = line:gsub("  .*", "")
+		out = out .. line
+	end
+	out = out:gsub("%s", "")
+
+	return out
+end
+
 local backwards_compatable = function ()
 	local size = 4
 	local key = get_key(size)
@@ -86,7 +112,6 @@ local other_sizes = function ()
 			print(string.format("SalsaX at n=%d [PASSED]", i))
 		else
 			print(string.format("SalsaX at n=%d [FAILED]", i))
-			os.exit(1)
 		end
 
 
@@ -95,22 +120,59 @@ local other_sizes = function ()
 	end
 end
 
+local AVALANCHE_ITERATIONS = 10
+---@param size integer
+local find_avalanche = function (size)
+
+	local avalanche = 0
+	for i = 1, AVALANCHE_ITERATIONS do
+		local key = get_key(size)
+
+		local from = "macbeth.txt"
+		local enc = "enc.txt"
+
+		salsax(size, key, from, enc)
+		local enc_file = io.open(enc, "r")
+		if not enc_file then error("Unable to read output") end
+		local output_1 = to_binary(enc_file:read("*a"))
+
+		local char_idx = math.random(1, #key - 1)
+
+		key = key:sub(1, char_idx - 1) .. string.char(string.byte(key:sub(char_idx, char_idx)) + 1)  .. key:sub(char_idx + 1)
+
+		salsax(size, key, from, enc)
+		enc_file = io.open(enc, "r")
+		if not enc_file then error("Unable to read output") end
+		local output_2 = to_binary(enc_file:read("*a"))
+
+		local flipped = 0
+		for i = 1, #output_1 do
+			if output_1:sub(i, i) ~= output_2:sub(i, i) then
+				flipped = flipped + 1
+			end
+		end
+		flipped = flipped / #output_1
+
+		print(string.format("result %d %f", i, flipped))
+		avalanche = avalanche + flipped
+	end
+
+	print(string.format("Avalanche for size %d [%.3f]", size, avalanche / AVALANCHE_ITERATIONS))
+
+	os.execute("rm ./enc.txt")
+end
+
+local all_avalanches = function ()
+	for i = 2, 16 do
+		find_avalanche(i)
+	end
+end
+
 local generic = function ()
-	local size = 5
-	local key = get_key(5)
-
-	local from = "small.txt"
-	local enc = "enc.txt"
-	local to = "d_small.txt"
-
-	print(salsax(size, key, from, enc))
-	print(salsax(size, key, enc, to))
-
-	local diff = io.popen(string.format("diff %s %s", from, to))
-	if not diff then error("Unable to diff") end
-	print(diff:read("*a"))
+	print(to_binary("hello world"))
 end
 
 -- backwards_compatable()
 -- other_sizes()
-generic()
+all_avalanches()
+-- generic()

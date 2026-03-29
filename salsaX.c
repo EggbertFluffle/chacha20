@@ -92,35 +92,22 @@ salsax create_salsax(size_t size, const char* key) {
 }
 
 void get_group_idx(size_t size, int iteration, bool diagonal, size_t* idx) {
-	bool odd = size % 2 == 1;
-
 	int i = 0;
 	for(size_t j = 0; j < size; j++) {
-		if(odd && j == iteration) {
-			j++;
-		}
-
 		idx[i] = (j * size) + iteration + (diagonal ? ((iteration + j) % size) - iteration : 0);
-
 		i++;
-	}
-
-	if(odd) {
-		idx[size - 1] = (iteration * size) + iteration + (diagonal ? ((iteration * 2) % size) - iteration : 0);
 	}
 }
 
 void salsax_fractional_round(salsax* salsa, const size_t* idx) {
-	bool odd_salsa = salsa->size % 2 == 1;
-	size_t actual_size = odd_salsa ? salsa->size - 1 : salsa->size;
-	uint32_t elements[actual_size];
+	size_t size = salsa->size;
+	uint32_t elements[salsa->size];
 
-	for(size_t i = 0; i < actual_size; i++) {
+	for(size_t i = 0; i < size; i++) {
 		elements[i] = salsa->data[idx[i]];
 	}
 
-	size_t ess_count = actual_size;
-	size_t pair_count = ess_count / 2;
+	size_t pair_count = size / 2;
 
 	size_t triplets[pair_count][3];
 
@@ -128,10 +115,10 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 		if(i % 2 == 0) {
 			triplets[i][0] = i;
 			triplets[i][1] = i + 1;
-			triplets[i][2] = (ess_count - 1) - i;
+			triplets[i][2] = (size - 1) - i;
 		} else {
-			triplets[i][0] = (ess_count - 1) - i;
-			triplets[i][1] = (ess_count - 1) - i + 1;
+			triplets[i][0] = (size - 1) - i;
+			triplets[i][1] = (size - 1) - i + 1;
 			triplets[i][2] = i;
 		}
 	}
@@ -177,16 +164,6 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 7);
-		}
-	}
-
-	if(odd_salsa) {
-		for (size_t i = 0; i < actual_size; i++) {
-			elements[actual_size] ^= elements[i];
-		}
-
-		for (size_t i = 0; i < actual_size; i++) {
-			elements[actual_size] ^= elements[i];
 		}
 	}
 
