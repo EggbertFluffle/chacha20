@@ -232,6 +232,8 @@ void salsax_encrypt(salsax* salsa, char* msg, size_t len) {
 	size_t salsa_length = salsa->size * salsa->size * 4;
 	char chunk[salsa_length];
 
+	salsax_print(salsa);
+
     for(size_t i = 0; i < len; i++) {
         if(i % salsa_length == 0) {
 			salsax_get_chunk(salsa, chunk);
