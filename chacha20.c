@@ -22,6 +22,16 @@ typedef struct {
 	uint32_t data[16];
 } chacha20;
 
+// Print chacha matrix contents
+void chacha20_print(chacha20* cha) {
+	for(int i = 0; i < 16; i++) {
+		printf("%zd\t", cha->data[i]);
+		if(i % 4 == 3) {
+			printf("\n");
+		}
+	}
+}
+
 // Indecies for quarter-rounds over columns and diagonals
 const size_t columns[4][4] = {
 	{0, 4, 8, 12},
@@ -77,9 +87,17 @@ void chacha20_quarter_round(chacha20* cha, const size_t* idx) {
 	uint32_t C = cha->data[idx[2]];
 	uint32_t D = cha->data[idx[3]];
 
+	// A B C D
+
+	// printf("[%zd] [%zd] [%zd] [%zd]\n", A, B, C, D);
+
+	// printf("16 (%zd) (%zd) (%zd)\n", A, B, D);
 	A += B; D ^= A; D = rotate(D, 16);
+	// printf("12 (%zd) (%zd) (%zd)\n", C, D, B);
 	C += D; B ^= C; B = rotate(B, 12);
+	// printf("8  (%zd) (%zd) (%zd)\n", A, B, D);
 	A += B; D ^= A; D = rotate(D, 8);
+	// printf("7  (%zd) (%zd) (%zd)\n", C, D, B);
 	C += D; B ^= C; B = rotate(B, 7);
 
 	cha->data[idx[0]] = A;
@@ -106,7 +124,7 @@ void chacha20_get_chunk(chacha20* cha1, uint8_t out[64]) {
         cha2.data[i] += cha1->data[i];
 	}
 
-    cha1->data[12] += 1;
+    // cha1->data[12] += 1;
     memcpy(out, cha2.data, 64);
 }
 
@@ -125,16 +143,6 @@ void chacha20_encrypt(chacha20 cha, char* msg, size_t len) {
 // Same thing as encrypt
 void chacha20_decrypt(chacha20 cha, char* d_msg, size_t len) {
 	chacha20_encrypt(cha, d_msg, len);
-}
-
-// Print chacha matrix contents
-void chacha20_print(chacha20* cha) {
-	for(int i = 0; i < 16; i++) {
-		printf("%d\t", cha->data[i]);
-		if(i % 4 == 3) {
-			printf("\n");
-		}
-	}
 }
 
 int main(int argc, char** argv) {

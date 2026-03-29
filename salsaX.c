@@ -62,7 +62,7 @@ typedef struct {
 void salsax_print(salsax* salsa) {
 	for (int i = 0; i < salsa->size; i++) {
 		for(int j = 0; j < salsa->size; j++) {
-			printf("%d\t\t", salsa->data[salsa->size * i + j]);
+			printf("%zd\t", salsa->data[salsa->size * i + j]);
 		}
 		printf("\n");
 	}
@@ -122,7 +122,7 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 	size_t ess_count = actual_size;
 	size_t pair_count = ess_count / 2;
 
-	size_t triplets[3][pair_count];
+	size_t triplets[pair_count][3];
 
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
@@ -131,17 +131,29 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 			triplets[i][2] = (ess_count - 1) - i;
 		} else {
 			triplets[i][0] = (ess_count - 1) - i;
-			triplets[i][1] = (ess_count - 1) - i - 1;
+			triplets[i][1] = (ess_count - 1) - i + 1;
 			triplets[i][2] = i;
 		}
 	}
 
+	// printf("1 {%d} {%d} {%d}\n", triplets[0][0], triplets[0][1], triplets[0][2]);
+	// printf("2 {%d} {%d} {%d}\n", triplets[1][0], triplets[1][1], triplets[1][2]);
+	// printf("[%zd] [%zd] [%zd] [%zd]\n", elements[0], elements[1], elements[2], elements[3]);
+
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
+			// printf("16 (%zd) (%zd) (%zd)\n", 
+			// 		elements[triplets[i][0]],
+			// 		elements[triplets[i][1]],
+			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 16);
 		} else {
+			// printf("12 (%zd) (%zd) (%zd)\n", 
+			// 		elements[triplets[i][0]],
+			// 		elements[triplets[i][1]],
+			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 12);
@@ -150,10 +162,18 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
+			// printf("8  (%zd) (%zd) (%zd)\n", 
+			// 		elements[triplets[i][0]],
+			// 		elements[triplets[i][1]],
+			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 8);
 		} else {
+			// printf("7  (%zd) (%zd) (%zd)\n", 
+			// 		elements[triplets[i][0]],
+			// 		elements[triplets[i][1]],
+			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 7);
@@ -191,11 +211,20 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 	}
 
 	for(int i = 0; i < 10; i++) {
-		salsax_fractional_round(&salsa2, columns[i % size]);
-		salsax_fractional_round(&salsa2, diagonals[i % size]);
+		for(int j = 0; j < size; j++) {
+			salsax_fractional_round(&salsa2, columns[j % size]);
+		}
+
+		for(int j = 0; j < size; j++) {
+			salsax_fractional_round(&salsa2, diagonals[j % size]);
+		}
 	}
 
-    salsa1->data[nonce_start(salsa1->size)] += 1;
+	for(int i = 0; i < salsa1->size * salsa1->size; i++) {
+		salsa2.data[i] += salsa1->data[i];
+	}
+
+    // salsa1->data[nonce_start(salsa1->size)] += 1;
     memcpy(dest, salsa2.data, sizeof(uint32_t) * salsa1->size * salsa1->size);
 }
 
