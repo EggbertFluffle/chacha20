@@ -175,7 +175,6 @@ local find_avalanche = function (size)
 		end
 		flipped = flipped / #output_1
 
-		print(string.format("result %d %f", i, flipped))
 		avalanche = avalanche + flipped
 	end
 
@@ -185,6 +184,7 @@ local find_avalanche = function (size)
 end
 
 local all_avalanches = function ()
+	print("----- Starting Avalanche Tests -----")
 	for i = 2, 16 do
 		find_avalanche(i)
 	end
@@ -200,7 +200,6 @@ local nist_test = function (size)
 	end
 
 	local temp = "temp.txt"
-	local nist_input = "./sts-2.1.2/nist_input.txt"
 
 	local write_file = io.open(temp, "w+")
 	if not write_file then error("Unable to open write file") end
@@ -211,29 +210,43 @@ local nist_test = function (size)
 	local nonce = get_nonce(size)
 
 	-- salsax(size, key, temp, nist_input)
-	chacha20(key, nonce, temp, nist_input)
+	salsax(size, key, nonce, temp, "./sts-2.1.2/nist_input.txt")
 
 	local asses = io.popen(string.format("cd ./sts-2.1.2 && echo '0\n./nist_input.txt\n1\n0\n 1\n1\n' | ./assess %d", NIST_TEST_SIZE))
+	if not asses then error("Unable to execute NIST assessment") end
+	local asses_output = asses:read("*a")
+	asses:close()
 
 	local results_file = io.open("./sts-2.1.2/experiments/AlgorithmTesting/finalAnalysisReport.txt", "r")
 	if not results_file then error("Unable to find NIST results file") end
-	local results = results_file:read("*a")
 
-	-- Check to see if any of the randomness tests failed
-	if not results:match("0/1") then
-		print(string.format("NIST test on size %d [FAILED]", size))
-	else
-		print(string.format("NIST test on size %d [PASSED]", size))
+	---@type string
+	local tests_results = results_file:read("*a"):gmatch("%d%/1")
+
+	local passed = 0
+	local total = 0
+	for test in tests_results do
+		total = total + 1
+		if test == "1/1" then
+			passed = passed + 1
+		end
 	end
 
-	os.execute(string.format("rm %s %s", temp, nist_input))
+	print(string.format("NIST test for size %d [%d/%d (%.2f%%) PASSED]", size, passed, total, (passed / total) * 100))
+
+	os.execute(string.format("rm %s %s %s", temp, "./sts-2.1.2/nist_input.txt", "./sts-2.1.2/experiments/AlgorithmTesting/finalAnalysisReport.txt"))
+	-- os.execute(string.format("rm %s %s", temp, "./sts-2.1.2/nist_input.txt"))
 end
 
 local all_nist_tests = function ()
-	
+	print("----- Starting NIST sts Randomness Tests -----")
+	for i = 2, 16 do
+		nist_test(i)
+	end
 end
 
 -- backwards_compatable()
 -- other_sizes()
 -- all_avalanches()
 all_nist_tests()
+-- nist_test(4)

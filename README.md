@@ -40,6 +40,18 @@ Famously, Chacha20 only uses three simple operations for all of it's calculation
 
 There is a test set that checks for proper behaviour at each size, backwards compatability with chacha20, the avalanche effect at different sizes, and runs the NIST sta test suite on SalsaX.
 
+### Avalanche
+
+Simple avalanche
+
+### NIST sts
+
+For more information visit [https://csrc.nist.gov/projects/random-bit-generation/documentation-and-software](https://csrc.nist.gov/projects/random-bit-generation/documentation-and-software)
+
+| **Size** | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **% Passed** | 97.53% | 0.62% | 98.77% | 1.23% | 98.77% | 22.22% | 95.68% | 44.44% | 97.87% | 50.62% | 98.77% | 38.89% | 97.53% | 62.96% | 97.34% |
+
 ## Building
 
 To build `salsax` and the `chacha20` example, simple run `make`
@@ -53,3 +65,17 @@ chacha20 <KEY> <INPUT_FILE> <OUTPUT_FILE>
 ```
 
 ## Testing
+
+To run the test suite, you must have Lua installed. Additionally, run the `Makefile` within `./sts-2.1.2/` by using
+
+```bash
+cd ./sts-2.1.2/ && make
+```
+
+Then simply run the test script with Lua.
+
+```bash
+lua ./test.lua
+```
+
+Keep in mind that the avalanche tests are slow.

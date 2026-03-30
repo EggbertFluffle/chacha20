@@ -2,10 +2,16 @@
 		--------------------------------------------
 		COMPUTATIONAL INFORMATION:
 		--------------------------------------------
-		(a) Number Of Cycles (J) = 0472
+		(a) Number Of Cycles (J) = 0665
 		(b) Sequence Length (n)  = 200000
-		---------------------------------------------
-		WARNING:  TEST NOT APPLICABLE.  THERE ARE AN
-			  INSUFFICIENT NUMBER OF CYCLES.
-		---------------------------------------------
+		(c) Rejection Constraint = 500.000000
+		-------------------------------------------
+SUCCESS		x = -4 chi^2 =  7.460896 p_value = 0.188557
+SUCCESS		x = -3 chi^2 =  9.011294 p_value = 0.108615
+SUCCESS		x = -2 chi^2 =  4.314174 p_value = 0.505124
+SUCCESS		x = -1 chi^2 =  5.968421 p_value = 0.309304
+SUCCESS		x =  1 chi^2 =  4.016541 p_value = 0.547037
+SUCCESS		x =  2 chi^2 =  2.528674 p_value = 0.772171
+SUCCESS		x =  3 chi^2 =  3.888864 p_value = 0.565525
+SUCCESS		x =  4 chi^2 =  2.040598 p_value = 0.843500
 
