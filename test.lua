@@ -58,6 +58,8 @@ local to_binary = function (str)
 	end
 	out = out:gsub("%s", "")
 
+	os.execute("rm tmp.txt")
+
 	return out
 end
 
@@ -170,18 +172,32 @@ end
 
 
 local NIST_TEST_SIZE = 200000
-local nist_test = function ()
-	local nist_input = "nist_input.txt"
+local nist_test = function (size)
+	local exit = os.execute("[ -d ./sts-2.1.2 ]")
+	if not exit then
+		print("Cannot run NIST test suite because test suite is not present")
+		return
+	end
 
-	local write_file = io.open(nist_input, "w+")
+	local temp = "temp.txt"
+	local nist_input = "./sts-2.1.2/nist_input.txt"
+
+	local write_file = io.open(temp, "w+")
 	if not write_file then error("Unable to open write file") end
 	write_file:write(string.rep("\000", NIST_TEST_SIZE))
 	write_file:close()
 
-	local asses = io.popen(string.format(""))
+	local key = get_key(size)
+
+	-- salsax(size, key, temp, nist_input)
+	chacha20(key, temp, nist_input)
+
+	-- local asses = io.popen(string.format("cd ./sts-2.1.2 && echo '0\n./%s\n1\n1\n1\n' | ./assess %d", nist_input, NIST_TEST_SIZE))
+
+	-- os.execute(string.format("rm %s %s", temp, nist_input))
 end
 
 -- backwards_compatable()
 -- other_sizes()
 -- all_avalanches()
-nist_test()
+nist_test(4)
