@@ -8,7 +8,20 @@ local key_sizes = { 1, 4, 8, 12, 20, 28, 36, 48, 60, 72, 88, 100, 120, 136, 156 
 ---@return string key
 local get_key = function(size)
 	local out = ""
-	for i = 1, key_sizes[size - 1] * 4 do
+	for _ = 1, key_sizes[size - 1] * 4 do
+		local char = math.random(48, 90)
+		out = out .. string.char(char)
+	end
+	return out:gsub("\\", "a")
+end
+
+local nonce_sizes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }
+
+---@param size integer
+---@return string nonce
+local get_nonce = function(size)
+	local out = ""
+	for _ = 1, nonce_sizes[size - 1] * 4 do
 		local char = math.random(48, 90)
 		out = out .. string.char(char)
 	end
@@ -17,11 +30,12 @@ end
 
 ---@param size integer
 ---@param key string 
+---@param nonce string
 ---@param input string
 ---@param output string
 ---@return string
-local salsax = function (size, key, input, output)
-	local prog = io.popen(string.format("./salsax %d '%s' %s %s", size, key, input, output))
+local salsax = function (size, key, nonce, input, output)
+	local prog = io.popen(string.format("./salsax %d '%s' '%s' %s %s", size, key, nonce, input, output))
 	if not prog then error("Unable to open program") end
 	local output = prog:read("*a")
 	prog:close()
@@ -29,16 +43,19 @@ local salsax = function (size, key, input, output)
 end
 
 ---@param key string 
+---@param nonce string
 ---@param input string
 ---@param output string
-local chacha20 = function (key, input, output)
-	os.execute(string.format("./chacha20 '%s' %s %s", key, input, output))
+local chacha20 = function (key, nonce, input, output)
+	os.execute(string.format("./chacha20 '%s' '%s' %s %s", key, nonce, input, output))
 end
 
 ---@param str string
 ---@return string
 local to_binary = function (str)
-	local write_file = io.open("tmp.txt", "w+")
+	local tmp = "tmp.txt"
+
+	local write_file = io.open(tmp, "w+")
 	if not write_file then error("Unable to write to temp file") end
 	write_file:write(str)
 	write_file:close()
@@ -58,7 +75,7 @@ local to_binary = function (str)
 	end
 	out = out:gsub("%s", "")
 
-	os.execute("rm tmp.txt")
+	os.execute(string.format("rm %s", tmp))
 
 	return out
 end
@@ -66,6 +83,7 @@ end
 local backwards_compatable = function ()
 	local size = 4
 	local key = get_key(size)
+	local nonce = get_nonce(size)
 
 	local from = "macbeth.txt"
 	local enc = "enc.txt"
@@ -75,12 +93,12 @@ local backwards_compatable = function ()
 	-- Encrypt with salsa4 and decrypt with chacha20
 	local cmds = {
 		function()
-			salsax(size, key, from, enc)
-			chacha20(key, enc, to)
+			salsax(size, key, nonce, from, enc)
+			chacha20(key, nonce, enc, to)
 		end,
 		function()
-			chacha20(key, from, enc)
-			salsax(size, key, enc, to)
+			chacha20(key, nonce, from, enc)
+			salsax(size, key, nonce, enc, to)
 		end,
 	}
 
@@ -103,9 +121,10 @@ end
 local other_sizes = function ()
 	for i = 2, 16 do
 		local key = get_key(i)
+		local nonce = get_nonce(i)
 
-		salsax(i, key, "macbeth.txt", "enc.txt")
-		salsax(i, key, "enc.txt", "d_macbeth.txt")
+		salsax(i, key, nonce, "macbeth.txt", "enc.txt")
+		salsax(i, key, nonce, "enc.txt", "d_macbeth.txt")
 
 		local diff = io.popen("diff macbeth.txt d_macbeth.txt")
 		if not diff then error("diff failed") end
@@ -129,11 +148,12 @@ local find_avalanche = function (size)
 	local avalanche = 0
 	for i = 1, AVALANCHE_ITERATIONS do
 		local key = get_key(size)
+		local nonce = get_nonce(size)
 
 		local from = "macbeth.txt"
 		local enc = "enc.txt"
 
-		salsax(size, key, from, enc)
+		salsax(size, key, nonce, from, enc)
 		local enc_file = io.open(enc, "r")
 		if not enc_file then error("Unable to read output") end
 		local output_1 = to_binary(enc_file:read("*a"))
@@ -142,7 +162,7 @@ local find_avalanche = function (size)
 
 		key = key:sub(1, char_idx - 1) .. string.char(string.byte(key:sub(char_idx, char_idx)) + 1)  .. key:sub(char_idx + 1)
 
-		salsax(size, key, from, enc)
+		salsax(size, key, nonce, from, enc)
 		enc_file = io.open(enc, "r")
 		if not enc_file then error("Unable to read output") end
 		local output_2 = to_binary(enc_file:read("*a"))
@@ -184,20 +204,36 @@ local nist_test = function (size)
 
 	local write_file = io.open(temp, "w+")
 	if not write_file then error("Unable to open write file") end
-	write_file:write(string.rep("\000", NIST_TEST_SIZE))
+	write_file:write(string.rep("\000", NIST_TEST_SIZE / 8))
 	write_file:close()
 
 	local key = get_key(size)
+	local nonce = get_nonce(size)
 
 	-- salsax(size, key, temp, nist_input)
-	chacha20(key, temp, nist_input)
+	chacha20(key, nonce, temp, nist_input)
 
-	-- local asses = io.popen(string.format("cd ./sts-2.1.2 && echo '0\n./%s\n1\n1\n1\n' | ./assess %d", nist_input, NIST_TEST_SIZE))
+	local asses = io.popen(string.format("cd ./sts-2.1.2 && echo '0\n./nist_input.txt\n1\n0\n 1\n1\n' | ./assess %d", NIST_TEST_SIZE))
 
-	-- os.execute(string.format("rm %s %s", temp, nist_input))
+	local results_file = io.open("./sts-2.1.2/experiments/AlgorithmTesting/finalAnalysisReport.txt", "r")
+	if not results_file then error("Unable to find NIST results file") end
+	local results = results_file:read("*a")
+
+	-- Check to see if any of the randomness tests failed
+	if not results:match("0/1") then
+		print(string.format("NIST test on size %d [FAILED]", size))
+	else
+		print(string.format("NIST test on size %d [PASSED]", size))
+	end
+
+	os.execute(string.format("rm %s %s", temp, nist_input))
+end
+
+local all_nist_tests = function ()
+	
 end
 
 -- backwards_compatable()
 -- other_sizes()
 -- all_avalanches()
-nist_test(4)
+all_nist_tests()

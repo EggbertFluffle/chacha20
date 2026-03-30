@@ -47,16 +47,17 @@ const size_t diagonals[4][4] = {
 	{3, 4, 9, 14}
 };
 
-chacha20 chacha20_create(const char* key, uint32_t counter) {
+chacha20 chacha20_create(const char* key, const char* nonce) {
 	// Key must be 256 bits
 	assert(strlen(key) == 32);
+	assert(strlen(nonce) == 12);
 
 	chacha20 out;
 	memset((void*)out.data, 0, 64);
 
 	// Insert the contant phrase
 	for (int i = 0; i < 4; i++) {
-		out.data[i] = *((uint32_t*) &constant_phrase[i*4]);
+		out.data[i] = *((uint32_t*) &constant_phrase[i * 4]);
 	}
 
 	// Insert the key
@@ -65,11 +66,10 @@ chacha20 chacha20_create(const char* key, uint32_t counter) {
 	}
 
 	// Insert the counter
-	out.data[12] = counter;
+	out.data[12] = 0;
 
-	// Set the nonce to 0? (THIS MIGHT BE WRONG)
-	for(int i = 0; i < 3; i++) {
-		out.data[13 + i] = 0;
+	for (int i = 0; i < 3; i++) {
+		out.data[13 + i] = *((uint32_t*) &nonce[i*4]);;
 	}
 
 	return out;
@@ -124,7 +124,7 @@ void chacha20_get_chunk(chacha20* cha1, uint8_t out[64]) {
         cha2.data[i] += cha1->data[i];
 	}
 
-    // cha1->data[12] += 1;
+    cha1->data[12] += 1;
     memcpy(out, cha2.data, 64);
 }
 
@@ -146,14 +146,14 @@ void chacha20_decrypt(chacha20 cha, char* d_msg, size_t len) {
 }
 
 int main(int argc, char** argv) {
-	if(argc != 4) {
-		printf("Usage: chacha20 <KEY> <INPUT_FILE> <OUTPUT_FILE>\n");
+	if(argc != 5) {
+		printf("Usage: chacha20 <KEY> <NOUCE> <INPUT_FILE> <OUTPUT_FILE>\n");
 		exit(-1);
 	}
 
-	chacha20 cha = chacha20_create(argv[1], 0);
+	chacha20 cha = chacha20_create(argv[1], argv[2]);
 
-	FILE* read_file = fopen(argv[2], "r");
+	FILE* read_file = fopen(argv[3], "r");
 	fseek(read_file, 0L, SEEK_END);
 	size_t msg_len = ftell(read_file);
 	fseek(read_file, 0L, SEEK_SET);
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 
 	chacha20_encrypt(cha, msg_buffer, msg_len);
 
-	FILE* write_file = fopen(argv[3], "w+");
+	FILE* write_file = fopen(argv[4], "w+");
 	fwrite(msg_buffer, sizeof(char), msg_len, write_file);
 	fclose(write_file);
 

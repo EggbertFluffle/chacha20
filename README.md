@@ -36,6 +36,20 @@ Using the quarter round, Chacha20 is able to contact every bit at least once dur
 
 Famously, Chacha20 only uses three simple operations for all of it's calculations. SalsaX does the exact same, though possible the hardest part to generalize, is choosing what the operations are applied to. For each column or diagonal, which we call a group, they have $n$ elements, where the $n$ is the grid size. Chacha20 always has 4 elements to choose from, and for demonstrations purposes, we label "A", "B", "C", and "D" consecutively. Then the elements are split into triplets. For Chacha20 this looks like (A, B, D) and (C, D, B). For each triplet, mod 32 addition, an XOR and left shift rotations are applied. To scale this, SalsaX picks triplets from each group by picking every other element in the group to be the first member of a new triplet. Then the second member is always choses as the member that appears after the first. Finnally, the last member of each triplet is chosen to be the element 2 places after the second, wrapping back to the beggning of the group if needed. This scales nicely for even numbers, but not as well for odd, which we will see later.
 
+## Test Results
+
+There is a test set that checks for proper behaviour at each size, backwards compatability with chacha20, the avalanche effect at different sizes, and runs the NIST sta test suite on SalsaX.
+
 ## Building
 
 To build `salsax` and the `chacha20` example, simple run `make`
+
+Afterwards, `salsax` and `chacha20` can be run like so.
+
+```bash
+salsax <SIZE> <KEY> <INPUT_FILE> <OUTPUT_FILE>
+
+chacha20 <KEY> <INPUT_FILE> <OUTPUT_FILE>
+```
+
+## Testing

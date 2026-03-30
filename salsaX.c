@@ -69,10 +69,16 @@ void salsax_print(salsax* salsa) {
 }
 
 
-salsax create_salsax(size_t size, const char* key) {
+salsax create_salsax(size_t size, const char* key, const char* nonce) {
 	const size_t key_len = strlen(key);
 	if (key_size(size) * 4 != key_len) {
 		printf("Invalid key size %zd for salsa%zd", key_len, size);
+		exit(-1);
+	}
+
+	const size_t nonce_len = strlen(nonce);
+	if (nonce_size(size) * 4 != nonce_len) {
+		printf("Invalid nonce size %zd for salsa%zd", nonce_len, size);
 		exit(-1);
 	}
 
@@ -81,12 +87,17 @@ salsax create_salsax(size_t size, const char* key) {
 		.data = (uint32_t*)malloc(sizeof(uint32_t) * size * size)
 	};
 	
+	// Copy the constant
 	memcpy(salsa.data, constant_phrase, const_size(size) * 4);
 
+	// Copy the key
 	memcpy(salsa.data + key_start(size), key, key_size(size) * 4);
 	
+	// 0 out the block
 	memset(salsa.data + block_start(size), 0, block_size(size) * 4);
-	memset(salsa.data + nonce_start(size), 0, nonce_size(size) * 4);
+
+	// Copy the nonce
+	memcpy(salsa.data + nonce_start(size), nonce, nonce_size(size) * 4);
 
 	return salsa;
 }
@@ -175,7 +186,7 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 		salsa2.data[i] += salsa1->data[i];
 	}
 
-    // salsa1->data[nonce_start(salsa1->size)] += 1;
+    salsa1->data[block_start(salsa1->size) + block_size(salsa1->size) - 1] += 1;
     memcpy(dest, salsa2.data, sizeof(uint32_t) * salsa1->size * salsa1->size);
 }
 
@@ -193,17 +204,18 @@ void salsax_encrypt(salsax* salsa, char* msg, size_t len) {
 }
 
 int main(int argc, char** argv) {
-	if(argc != 5) {
-		printf("Usage: salsax <SIZE> <KEY> <INPUT_FILE> <OUTPUT_FILE>\n");
+	if(argc != 6) {
+		printf("Usage: salsax <SIZE> <KEY> <NOUCE> <INPUT_FILE> <OUTPUT_FILE>\n");
 		exit(-1);
 	}
 
 	char* key = argv[2];
+	char* nonce = argv[3];
 	size_t size = atoi(argv[1]);
 
-	salsax salsa = create_salsax(size, key);
+	salsax salsa = create_salsax(size, key, nonce);
 
-	FILE* read_file = fopen(argv[3], "r");
+	FILE* read_file = fopen(argv[4], "r");
 
 	// Get size of input file
 	fseek(read_file, 0L, SEEK_END);
@@ -216,7 +228,7 @@ int main(int argc, char** argv) {
 	
 	salsax_encrypt(&salsa, msg_buffer, msg_len);
 
-	FILE* write_file = fopen(argv[4], "w+");
+	FILE* write_file = fopen(argv[5], "w+");
 	fwrite(msg_buffer, sizeof(char), msg_len, write_file);
 	fclose(write_file);
 
