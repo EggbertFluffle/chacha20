@@ -112,35 +112,17 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 	size_t triplets[pair_count][3];
 
 	for (size_t i = 0; i < pair_count; i++) {
-		if(i % 2 == 0) {
-			triplets[i][0] = i;
-			triplets[i][1] = i + 1;
-			triplets[i][2] = (size - 1) - i;
-		} else {
-			triplets[i][0] = (size - 1) - i;
-			triplets[i][1] = (size - 1) - i + 1;
-			triplets[i][2] = i;
-		}
+		triplets[i][0] = i * 2;
+		triplets[i][1] = triplets[i][0] + 1;
+		triplets[i][2] = (triplets[i][1] + 2) % size;
 	}
-
-	// printf("1 {%d} {%d} {%d}\n", triplets[0][0], triplets[0][1], triplets[0][2]);
-	// printf("2 {%d} {%d} {%d}\n", triplets[1][0], triplets[1][1], triplets[1][2]);
-	// printf("[%zd] [%zd] [%zd] [%zd]\n", elements[0], elements[1], elements[2], elements[3]);
 
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
-			// printf("16 (%zd) (%zd) (%zd)\n", 
-			// 		elements[triplets[i][0]],
-			// 		elements[triplets[i][1]],
-			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 16);
 		} else {
-			// printf("12 (%zd) (%zd) (%zd)\n", 
-			// 		elements[triplets[i][0]],
-			// 		elements[triplets[i][1]],
-			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 12);
@@ -149,18 +131,10 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 
 	for (size_t i = 0; i < pair_count; i++) {
 		if(i % 2 == 0) {
-			// printf("8  (%zd) (%zd) (%zd)\n", 
-			// 		elements[triplets[i][0]],
-			// 		elements[triplets[i][1]],
-			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 8);
 		} else {
-			// printf("7  (%zd) (%zd) (%zd)\n", 
-			// 		elements[triplets[i][0]],
-			// 		elements[triplets[i][1]],
-			// 		elements[triplets[i][2]]);
 			elements[triplets[i][0]] += elements[triplets[i][1]];
 			elements[triplets[i][2]] ^= elements[triplets[i][0]];
 			elements[triplets[i][2]] = rotate(elements[triplets[i][2]], 7);
@@ -190,8 +164,6 @@ void salsax_get_chunk(salsax* salsa1, char* dest) {
 	for(int i = 0; i < 10; i++) {
 		for(int j = 0; j < size; j++) {
 			salsax_fractional_round(&salsa2, columns[j % size]);
-			// salsax_print(&salsa2);
-			// exit(1);
 		}
 
 		for(int j = 0; j < size; j++) {

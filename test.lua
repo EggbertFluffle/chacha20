@@ -120,7 +120,7 @@ local other_sizes = function ()
 	end
 end
 
-local AVALANCHE_ITERATIONS = 10
+local AVALANCHE_ITERATIONS = 5
 ---@param size integer
 local find_avalanche = function (size)
 
@@ -168,11 +168,20 @@ local all_avalanches = function ()
 	end
 end
 
-local generic = function ()
-	print(to_binary("hello world"))
+
+local NIST_TEST_SIZE = 200000
+local nist_test = function ()
+	local nist_input = "nist_input.txt"
+
+	local write_file = io.open(nist_input, "w+")
+	if not write_file then error("Unable to open write file") end
+	write_file:write(string.rep("\000", NIST_TEST_SIZE))
+	write_file:close()
+
+	local asses = io.popen(string.format(""))
 end
 
 -- backwards_compatable()
 -- other_sizes()
-all_avalanches()
--- generic()
+-- all_avalanches()
+nist_test()
