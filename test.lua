@@ -79,36 +79,6 @@ local compare_files = function(file1, file2)
     return flipped / total_bits
 end
 
----@param str string
----@return string
-local to_binary = function (str)
-	local tmp = "tmp.txt"
-
-	local write_file = io.open(tmp, "w+")
-	if not write_file then error("Unable to write to temp file") end
-	write_file:write(str)
-	write_file:close()
-
-	local xxd = io.popen(string.format("xxd -b tmp.txt"))
-	if not xxd then error("Unable to xxd") end
-
-	local out = ""
-	while true do
-		---@type string
-		local line = xxd:read("*l")
-		if not line then break end
-
-		line = line:gsub(".*: ", "")
-		line = line:gsub("  .*", "")
-		out = out .. line
-	end
-	out = out:gsub("%s", "")
-
-	os.execute(string.format("rm %s", tmp))
-
-	return out
-end
-
 local backwards_compatable = function ()
 	local size = 4
 	local key = get_key(size)
@@ -250,7 +220,6 @@ local nist_test = function (size)
 	print(string.format("NIST test for size %d [%d/%d (%.2f%%) PASSED]", size, passed, total, (passed / total) * 100))
 
 	os.execute(string.format("rm %s %s %s", temp, "./sts-2.1.2/nist_input.txt", "./sts-2.1.2/experiments/AlgorithmTesting/finalAnalysisReport.txt"))
-	-- os.execute(string.format("rm %s %s", temp, "./sts-2.1.2/nist_input.txt"))
 end
 
 local all_nist_tests = function ()
@@ -260,7 +229,9 @@ local all_nist_tests = function ()
 	end
 end
 
--- backwards_compatable()
--- other_sizes()
+os.execute("make clean")
+os.execute("make")
+backwards_compatable()
+other_sizes()
 all_avalanches()
--- all_nist_tests()
+all_nist_tests()

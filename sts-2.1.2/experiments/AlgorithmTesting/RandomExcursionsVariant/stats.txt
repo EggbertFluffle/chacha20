@@ -2,25 +2,11 @@
 		--------------------------------------------
 		COMPUTATIONAL INFORMATION:
 		--------------------------------------------
-		(a) Number Of Cycles (J) = 665
+		(a) Number Of Cycles (J) = 292
 		(b) Sequence Length (n)  = 200000
 		--------------------------------------------
-SUCCESS		(x = -9) Total visits =  698; p-value = 0.826288
-SUCCESS		(x = -8) Total visits =  718; p-value = 0.707485
-SUCCESS		(x = -7) Total visits =  712; p-value = 0.720764
-SUCCESS		(x = -6) Total visits =  671; p-value = 0.960437
-SUCCESS		(x = -5) Total visits =  665; p-value = 1.000000
-SUCCESS		(x = -4) Total visits =  666; p-value = 0.991731
-SUCCESS		(x = -3) Total visits =  661; p-value = 0.960879
-SUCCESS		(x = -2) Total visits =  703; p-value = 0.547450
-SUCCESS		(x = -1) Total visits =  708; p-value = 0.238367
-SUCCESS		(x =  1) Total visits =  646; p-value = 0.602375
-SUCCESS		(x =  2) Total visits =  677; p-value = 0.849329
-SUCCESS		(x =  3) Total visits =  770; p-value = 0.197888
-SUCCESS		(x =  4) Total visits =  852; p-value = 0.052616
-FAILURE		(x =  5) Total visits =  951; p-value = 0.008947
-FAILURE		(x =  6) Total visits =  983; p-value = 0.008561
-SUCCESS		(x =  7) Total visits =  996; p-value = 0.011827
-FAILURE		(x =  8) Total visits = 1051; p-value = 0.006279
-SUCCESS		(x =  9) Total visits = 1026; p-value = 0.016359
+
+		WARNING:  TEST NOT APPLICABLE.  THERE ARE AN
+			  INSUFFICIENT NUMBER OF CYCLES.
+		---------------------------------------------
 
