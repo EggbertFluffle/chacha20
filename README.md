@@ -1,6 +1,6 @@
 # SalsaX
 
-SalsaX is a modification of the Chacha20 stream cipher algorithm. It takes the original Chacha20 design and scales it up to support any grid size between 2 and 16. Chacha20 is typically done on a 4x4 grid, so the motivation to allow grid size to be variable is fuels two hypotheses. First, using increased grid sizes naturally adds complexity to the origional Chacha20 algorithm. Additionally, variable grid size allows the decision for performance over security, or vice versa, to be lifted to the user.
+SalsaX is a modification of the Chacha20 stream cipher algorithm. It takes the original Chacha20 design and scales it up to support any grid size between 2 and 16. Chacha20 is typically done on a 4x4 grid, so the motivation to allow grid size to be variable fuels two hypotheses. First, using increased grid sizes naturally adds complexity to the original Chacha20 algorithm. Additionally, variable grid size allows the decision for performance over security, or vice versa, to be lifted to the user.
 
 SalsaX was designed to map as close to the Chacha20 algorithm as possible. This idea is present in all of the facets of that needed to change along with the grid size, which are all detailed below.
 
@@ -42,7 +42,13 @@ There is a test set that checks for proper behaviour at each size, backwards com
 
 ### Avalanche
 
-Simple avalanche
+Simple avalanche test has SalsaX output an encryption, then a single bit is modified within the key and the a new outputs is calculated. These two outputs are compared bit by bit to get the avalanche percentage. This is iterated 50 times and the average is reported for each size.
+
+| **Size** | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **% Changed** | 50.01 | 0.67 | 50.01 | 29.91 | 50.00 | 35.72 | 50.00 | 38.93 | 50.00 | 41.10 | 49.99 | 42.24 | 49.99 | 43.15 | 49.99 |
+
+Notice how sizes that are low and odd (3 and 5) produce worse scores.
 
 ### NIST sts
 

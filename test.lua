@@ -50,6 +50,35 @@ local chacha20 = function (key, nonce, input, output)
 	os.execute(string.format("./chacha20 '%s' '%s' %s %s", key, nonce, input, output))
 end
 
+---@param file1 string
+---@param file2 string
+---@return number ratio
+local compare_files = function(file1, file2)
+    local f1 = io.open(file1, "rb")
+    local f2 = io.open(file2, "rb")
+	if not f1 then error("Unable to open " .. file1) end
+	if not f2 then error("Unable to open " .. file2) end
+
+    local data1 = f1:read("*a")
+    local data2 = f2:read("*a")
+
+    f1:close()
+    f2:close()
+
+    local flipped = 0
+    local len = #data1
+    for i = 1, len do
+        local diff = data1:byte(i) ~ data2:byte(i)
+        while diff > 0 do
+            flipped = flipped + (diff & 1)
+            diff = diff >> 1
+        end
+    end
+
+    local total_bits = len * 8
+    return flipped / total_bits
+end
+
 ---@param str string
 ---@return string
 local to_binary = function (str)
@@ -141,46 +170,32 @@ local other_sizes = function ()
 	end
 end
 
-local AVALANCHE_ITERATIONS = 5
+local AVALANCHE_ITERATIONS = 50
 ---@param size integer
 local find_avalanche = function (size)
-
 	local avalanche = 0
+
 	for i = 1, AVALANCHE_ITERATIONS do
 		local key = get_key(size)
 		local nonce = get_nonce(size)
 
 		local from = "macbeth.txt"
-		local enc = "enc.txt"
+		local first = "first.txt"
+		local second = "second.txt"
 
-		salsax(size, key, nonce, from, enc)
-		local enc_file = io.open(enc, "r")
-		if not enc_file then error("Unable to read output") end
-		local output_1 = to_binary(enc_file:read("*a"))
+		salsax(size, key, nonce, from, first)
 
 		local char_idx = math.random(1, #key - 1)
-
 		key = key:sub(1, char_idx - 1) .. string.char(string.byte(key:sub(char_idx, char_idx)) + 1)  .. key:sub(char_idx + 1)
 
-		salsax(size, key, nonce, from, enc)
-		enc_file = io.open(enc, "r")
-		if not enc_file then error("Unable to read output") end
-		local output_2 = to_binary(enc_file:read("*a"))
+		salsax(size, key, nonce, from, second)
 
-		local flipped = 0
-		for i = 1, #output_1 do
-			if output_1:sub(i, i) ~= output_2:sub(i, i) then
-				flipped = flipped + 1
-			end
-		end
-		flipped = flipped / #output_1
+		avalanche = avalanche + compare_files(first, second)
 
-		avalanche = avalanche + flipped
+		os.execute(string.format("rm %s %s", first, second))
 	end
 
-	print(string.format("Avalanche for size %d [%.3f]", size, avalanche / AVALANCHE_ITERATIONS))
-
-	os.execute("rm ./enc.txt")
+	print(string.format("Avalanche for size %d [%.2f %%]", size, (avalanche / AVALANCHE_ITERATIONS) * 100))
 end
 
 local all_avalanches = function ()
@@ -247,6 +262,5 @@ end
 
 -- backwards_compatable()
 -- other_sizes()
--- all_avalanches()
-all_nist_tests()
--- nist_test(4)
+all_avalanches()
+-- all_nist_tests()
