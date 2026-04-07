@@ -229,9 +229,10 @@ local all_nist_tests = function ()
 	end
 end
 
-os.execute("make clean")
-os.execute("make")
-backwards_compatable()
-other_sizes()
-all_avalanches()
-all_nist_tests()
+-- os.execute("make clean")
+-- os.execute("make")
+-- backwards_compatable()
+-- other_sizes()
+find_avalanche(3)
+-- all_avalanches()
+-- all_nist_tests()

@@ -62,7 +62,7 @@ typedef struct {
 void salsax_print(salsax* salsa) {
 	for (int i = 0; i < salsa->size; i++) {
 		for(int j = 0; j < salsa->size; j++) {
-			printf("%zd\t", salsa->data[salsa->size * i + j]);
+			printf("%d\t", salsa->data[salsa->size * i + j]);
 		}
 		printf("\n");
 	}
@@ -125,7 +125,7 @@ void salsax_fractional_round(salsax* salsa, const size_t* idx) {
 	for (size_t i = 0; i < pair_count; i++) {
 		triplets[i][0] = i * 2;
 		triplets[i][1] = triplets[i][0] + 1;
-		triplets[i][2] = (triplets[i][1] + 2) % size;
+		triplets[i][2] = (triplets[i][1] + 2 - (i == pair_count - 1 ? 1 : 0)) % size;
 	}
 
 	for (size_t i = 0; i < pair_count; i++) {
